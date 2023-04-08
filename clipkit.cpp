@@ -31,6 +31,18 @@ std::tuple<std::string, std::string> next_sample(std::ifstream &in) {
     return std::make_tuple(name, seq);
 }
 
+int is_unknown_site(char base)
+{
+    switch (base) {
+        case 'N':
+        case 'n':
+        case '-':
+        case '?':
+            return 1;
+        default:
+            return 0;
+    }
+}
 
 int main() {
     // verify input
@@ -41,41 +53,59 @@ int main() {
         return 1;
     }
 
-    // std::vector<std::map<char, int>> counts; // counts[i][c] is the number of times character c appears in column i
+
+    // read allignments and find snp-sites
+    std::string name, seq;
     std::string reference_seq;
 
-    // read allignments and print them
-    std::string name, seq;
     while (!in.eof()) {
         std::tie(name, seq) = next_sample(in);
 
-        // update columns and counts size
-        if (columns == 0) {
-            columns = seq.size();
+        // if reference_seq haven't been initialized
+        if (reference_seq.size() == 0) {
+            // init reference_seq with seq's length of N characters
+            reference_seq = std::string(seq.size(), 'N');
         }
 
-    }
+        // find snp-sites
+        for (int i = 0; i < reference_seq.size(); i++) {
+            // ignore snp-sites
+            if (reference_seq[i] == '>') continue;
 
-    // determain column i is parsimony informative
-    std::vector<bool> informative(counts.size(), false);
-
-    // find number of characters that occurs at least twice
-    for (int i = 0; i < columns; ++i) {
-        int n = 0;
-        for (int c = 0; c < counts.size(); ++c) {
-            if (counts[c][i] > 1) {
-                ++n;
+            // process site i
+            if (reference_seq[i] == 'N') {
+                // update reference_seq[i] if needed
+                if (!is_unknown_site(seq[i])) {
+                    reference_seq[i] = seq[i];
+                }
+            } else {
+                // check if site i is a snp-site
+                if (!is_unknown_site(seq[i]) && reference_seq[i] != seq[i]) {
+                    reference_seq[i] = '>';
+                }
             }
         }
-        if (n > 1) {
-            informative[i] = true;
-        }
     }
 
-    // print informative columns
-    for (int i = 0; i < counts.size(); ++i) {
-        if (informative[i]) {
-            std::cout << i << std::endl;
+    // reset file pointer
+    in.clear();
+    in.seekg(0, std::ios_base::beg);
+
+    // write snp-sites to file
+    std::ofstream out("snp-sites.fa");
+    while (!in.eof()) {
+        std::tie(name, seq) = next_sample(in);
+
+        out << ">" << name << std::endl;
+        for (int i = 0; i < reference_seq.size(); i++) {
+            if (reference_seq[i] == '>') {
+                out << seq[i];
+            }
         }
+        out << std::endl;
     }
+
+    // close files
+    in.close();
+    out.close();
 }
