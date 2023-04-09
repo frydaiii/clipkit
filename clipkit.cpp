@@ -4,6 +4,7 @@
 #include <tuple>
 #include <vector>
 #include <map>
+#include <unordered_set>
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -23,6 +24,7 @@ std::tuple<std::string, std::string> next_sample(std::ifstream &in) {
             in.seekg(-line.size(), std::ios_base::cur);
             break;
         }
+        line.pop_back(); // remove newline character
         seq += line;
     }
     // step back one char if we are not at the end of the file
@@ -33,20 +35,39 @@ std::tuple<std::string, std::string> next_sample(std::ifstream &in) {
     return std::make_tuple(name, seq);
 }
 
-int is_unknown_site(char base)
+const std::string AA = "aa", NT = "nt";
+
+int is_unknown_site(char base, std::string seq_type)
 {
-    switch (base) {
-        case 'N':
-        case 'n':
-        case '-':
-        case '?':
-            return 1;
-        default:
-            return 0;
+    if (seq_type == NT) {
+        switch (base) {
+            case '-':
+            case '?':
+            case '*':
+            case 'X':
+            case 'x':
+            case 'N':
+            case 'n':
+                return 1;
+            default:
+                return 0;
+        }
+    } else {
+        switch (base) {
+            case '-':
+            case '?':
+            case '*':
+            case 'X':
+            case 'x':
+                return 1;
+            default:
+                return 0;
+        }
     }
 }
 
 void clipkit(std::string input_filename, std::string output_filename) {
+    std::string seq_type = "";
     // verify input
     std::ifstream in(input_filename);
     if (!in) {
@@ -54,10 +75,10 @@ void clipkit(std::string input_filename, std::string output_filename) {
         return;
     }
 
-
     // read allignments and find snp-sites
     std::string name, seq;
     std::string reference_seq;
+    std::unordered_set<char> sites;
 
     while (!in.eof()) {
         std::tie(name, seq) = next_sample(in);
@@ -69,23 +90,31 @@ void clipkit(std::string input_filename, std::string output_filename) {
         }
 
         // find snp-sites
-        for (int i = 0; i < reference_seq.size(); i++) {
-            // ignore snp-sites
-            if (reference_seq[i] == '>') continue;
+        for (int i = 0; i < seq.size(); i++) {
+            // ignore snp-sites and unknown sites
+            if (reference_seq[i] == '>' || is_unknown_site(seq[i], seq_type)) continue;
+
+            // update sites
+            sites.insert(seq[i]);
 
             // process site i
             if (reference_seq[i] == 'N') {
                 // update reference_seq[i] if needed
-                if (!is_unknown_site(seq[i])) {
-                    reference_seq[i] = seq[i];
-                }
+                reference_seq[i] = seq[i];
             } else {
                 // check if site i is a snp-site
-                if (!is_unknown_site(seq[i]) && reference_seq[i] != seq[i]) {
+                if (reference_seq[i] != seq[i]) {
                     reference_seq[i] = '>';
                 }
             }
         }
+    }
+
+    // determine sequence type
+    if (sites.size() > 5) {
+        seq_type = AA;
+    } else {
+        seq_type = NT;
     }
 
     // get snp-site locations
@@ -130,19 +159,18 @@ void clipkit(std::string input_filename, std::string output_filename) {
 
         // find parsimony-informative sites
         for (int i = 0; i < seq.size(); i++) {
-            char base = seq[i];
             // process site i
-            if (is_unknown_site(base)) {
+            if (is_unknown_site(seq[i], seq_type)) {
                 // ignore unknown sites
                 continue;
             } else {
                 // check if site i is a parsimony-informative site
-                if (base_counts[i].find(base) == base_counts[i].end()) {
+                if (base_counts[i].find(seq[i]) == base_counts[i].end()) {
                     // new base
-                    base_counts[i][base] = 1;
+                    base_counts[i][seq[i]] = 1;
                 } else {
                     // existing base
-                    base_counts[i][base]++;
+                    base_counts[i][seq[i]]++;
                 }
             }
         }
@@ -173,10 +201,15 @@ void clipkit(std::string input_filename, std::string output_filename) {
         // print sample name
         out << ">" << name << std::endl;
 
-        // print parsimony-informative sites
+        // print parsimony-informative sites, newline at 60th site
+        int count = 0;
         for (int i = 0; i < is_parsimony_informative_site.size(); i++) {
             if (is_parsimony_informative_site[i] == true) {
                 out << seq[i];
+                count++;
+                if (count % 60 == 0) {
+                    out << std::endl;
+                }
             }
         }
         out << std::endl;
@@ -188,9 +221,6 @@ void clipkit(std::string input_filename, std::string output_filename) {
 }
 
 int main() {
-    // std::string input = "/mnt/d/Homo_sapiens.GRCh38.dna.chromosome.1.fa/Homo_sapiens.GRCh38.dna.chromosome.1.fa";
-
-
     // get all files in current directory
     std::string path = "/mnt/d/GBE_Shen_etal_2016/GBE_2016/Full_length_dataset/Alignments_mammals/aa";
     for (const auto & entry_it : fs::directory_iterator(path))
@@ -199,7 +229,10 @@ int main() {
             std::string input_filename = entry_it.path().string();
             // gen output file by change input file's extension
             std::string extension = fs::path(input_filename).extension().string();
-            std::string new_extension = ".kpi";
+
+            // ignore non-fasta files
+            if (extension != ".fasta") continue;
+            std::string new_extension = ".fasta.clipkit";
             std::string output_filename = input_filename.substr(0, input_filename.size() - extension.size()) + new_extension;
 
             // run clipkit
