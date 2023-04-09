@@ -24,7 +24,7 @@ std::tuple<std::string, std::string> next_sample(std::ifstream &in) {
             in.seekg(-line.size(), std::ios_base::cur);
             break;
         }
-        line.pop_back(); // remove newline character
+        if (line.size() > 1 && line.back() == '\r') line.pop_back(); // remove newline character
         seq += line;
     }
     // step back one char if we are not at the end of the file
@@ -97,15 +97,9 @@ void clipkit(std::string input_filename, std::string output_filename) {
             // update sites
             sites.insert(seq[i]);
 
-            // process site i
-            if (reference_seq[i] == 'N') {
-                // update reference_seq[i] if needed
-                reference_seq[i] = seq[i];
-            } else {
-                // check if site i is a snp-site
-                if (reference_seq[i] != seq[i]) {
-                    reference_seq[i] = '>';
-                }
+            // check if site i is a snp-site
+            if (reference_seq[i] != seq[i]) {
+                reference_seq[i] = '>';
             }
         }
     }
@@ -164,7 +158,7 @@ void clipkit(std::string input_filename, std::string output_filename) {
                 // ignore unknown sites
                 continue;
             } else {
-                // check if site i is a parsimony-informative site
+                // update base_counts[i]
                 if (base_counts[i].find(seq[i]) == base_counts[i].end()) {
                     // new base
                     base_counts[i][seq[i]] = 1;
@@ -205,14 +199,14 @@ void clipkit(std::string input_filename, std::string output_filename) {
         int count = 0;
         for (int i = 0; i < is_parsimony_informative_site.size(); i++) {
             if (is_parsimony_informative_site[i] == true) {
-                out << seq[i];
                 count++;
-                if (count % 60 == 0) {
+                if (count % 60 == 1 && count > 1) {
                     out << std::endl;
                 }
+                out << seq[i];
             }
         }
-        out << std::endl;
+        if (count > 0) out << std::endl;
     }
 
     // close files
@@ -225,8 +219,8 @@ int main() {
     std::string path = "/mnt/d/GBE_Shen_etal_2016/GBE_2016/Full_length_dataset/Alignments_mammals/aa";
     for (const auto & entry_it : fs::directory_iterator(path))
         if (entry_it.is_regular_file()) {
-
             std::string input_filename = entry_it.path().string();
+
             // gen output file by change input file's extension
             std::string extension = fs::path(input_filename).extension().string();
 
