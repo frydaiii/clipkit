@@ -9,11 +9,19 @@ std::string snp_sites(std::string input, std::string output) {
         return "";
     }
 
-    // read allignments and find snp-sites
-    std::string name, seq;
-    std::string reference_seq;
-    std::unordered_set<char> sites;
 
+    // init reference_seq 
+    std::string name, seq;
+    std::tie(name, seq) = next_sample(in);
+    std::string reference_seq(seq.size(), 'N');
+
+    for (int i = 0; i < seq.size(); i++) {
+        if (!is_unknown_site(seq[i], seq_type)) {
+            reference_seq[i] = seq[i];
+        }
+    }
+
+    std::unordered_set<char> sites; // sites is a set of all bases that occur at least once
     while (!in.eof()) {
         std::tie(name, seq) = next_sample(in);
 
@@ -51,7 +59,7 @@ std::string snp_sites(std::string input, std::string output) {
     in.seekg(0, std::ios_base::beg);
 
     // print snp-sites to file
-    std::ofstream out("snp_sites.fa");
+    std::ofstream out(output);
     while (!in.eof()) {
         std::tie(name, seq) = next_sample(in);
 
@@ -65,7 +73,7 @@ std::string snp_sites(std::string input, std::string output) {
         out << std::endl;
     }
 
-    // close original input file
+    // close files
     in.close();
     out.close();
 

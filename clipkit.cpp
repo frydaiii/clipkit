@@ -37,6 +37,26 @@ std::vector<std::map<char, int>> num_ocurrences(std::string input, std::string s
     return base_counts;
 }
 
+std::vector<bool> determine_parsimony_informative(std::vector<std::map<char, int>> base_counts) {
+    std::vector<bool> is_parsimony_informative_site(base_counts.size(), false); // is_parsimony_informative_site[i] = true if seq[i] is a parsimony-informative site
+
+    for (int i = 0; i < base_counts.size(); i++) {
+        // counting number of bases that occur at least twice
+        int count = 0;
+        for (auto it = base_counts[i].begin(); it != base_counts[i].end(); it++) {
+            if (it->second >= 2) {
+                count++;
+            }
+        }
+        // if there are at least two bases that occur at least twice
+        if (count >= 2) {
+            is_parsimony_informative_site[i] = true;
+        }
+    }
+
+    return is_parsimony_informative_site;
+}
+
 void write_result(std::string snp_file, std::vector<bool> is_parsimony_informative_site, std::string output) {
     // open snp-sites file for reading
     std::ifstream in(snp_file);
@@ -70,27 +90,16 @@ void write_result(std::string snp_file, std::vector<bool> is_parsimony_informati
 }
 
 void clipkit(std::string input_file, std::string output_file) {
-    std::string snp_file = "snp_sites.fa";
+    std::string snp_file = "snp_sites.fa"; // temporary file for snp-sites output
     std::string seq_type = snp_sites(input_file, snp_file);
 
     // find parsimony-informative sites
-    std::vector<std::map<char, int>> base_counts = num_ocurrences(snp_file, seq_type); // base_counts[i] is a map of base counts at snp_sites_loc[i]
-    std::vector<bool> is_parsimony_informative_site(base_counts.size(), false); // is_parsimony_informative_site[i] = true if seq[i] is a parsimony-informative site
-
-    for (int i = 0; i < base_counts.size(); i++) {
-        // counting number of bases that occur at least twice
-        int count = 0;
-        for (auto it = base_counts[i].begin(); it != base_counts[i].end(); it++) {
-            if (it->second >= 2) {
-                count++;
-            }
-        }
-        // if there are at least two bases that occur at least twice
-        if (count >= 2) {
-            is_parsimony_informative_site[i] = true;
-        }
-    }
+    std::vector<std::map<char, int>> base_counts = num_ocurrences(snp_file, seq_type); 
+    std::vector<bool> pi_sites = determine_parsimony_informative(base_counts);
 
     // print result
-    write_result(snp_file, is_parsimony_informative_site, output_file);
+    write_result(snp_file, pi_sites, output_file);
+
+    // remove snp_sites.fa
+    remove(snp_file.c_str());
 }
