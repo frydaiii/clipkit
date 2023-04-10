@@ -5,6 +5,6 @@
 #include "utils.h"
 
 /*
-    Generate snp-sites to a file and return type of input sequence.
+    Get sequentype of the input and location of snp-sites and constant-sites.
 */
-std::string snp_sites(std::string input, std::string output);
+std::tuple<std::string, std::vector<int>, std::vector<int>> snp_sites(std::string);

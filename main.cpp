@@ -5,8 +5,8 @@ namespace fs = std::filesystem;
 
 int main() {
     // get all files in current directory
-    std::string path = "/mnt/d/GBE_Shen_etal_2016/GBE_2016/Full_length_dataset/Alignments_mammals/aa";
-    // std::string path = "/mnt/d/Homo_sapiens.GRCh38.dna.chromosome.1.fa";
+    // std::string path = "/mnt/d/GBE_Shen_etal_2016/GBE_2016/Full_length_dataset/Alignments_mammals/aa";
+    std::string path = "/mnt/d/Homo_sapiens.GRCh38.dna.chromosome.1.fa";
     for (const auto & entry_it : fs::directory_iterator(path))
         if (entry_it.is_regular_file()) {
             std::string input_file = entry_it.path().string();

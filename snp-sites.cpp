@@ -1,12 +1,12 @@
 #include "snp-sites.h"
 
-std::string snp_sites(std::string input, std::string output) {
+std::tuple<std::string, std::vector<int>, std::vector<int>> snp_sites(std::string input_file) {
     std::string seq_type = "";
     // verify input
-    std::ifstream in(input);
+    std::ifstream in(input_file);
     if (!in) {
-        std::cerr << "Error: cannot open file " << input << std::endl;
-        return "";
+        std::cerr << "Error: cannot open file " << input_file << std::endl;
+        return std::make_tuple(seq_type, std::vector<int>(), std::vector<int>());
     }
 
 
@@ -48,34 +48,16 @@ std::string snp_sites(std::string input, std::string output) {
 
     // get snp-site locations
     std::vector<int> snp_sites_loc;
+    std::vector<int> constant_sites_loc;
     for (int i = 0; i < reference_seq.size(); i++) {
         if (reference_seq[i] == '>') {
             snp_sites_loc.push_back(i);
+        } else {
+            constant_sites_loc.push_back(i);
         }
     }
 
-    // reset file pointer
-    in.clear();
-    in.seekg(0, std::ios_base::beg);
-
-    // print snp-sites to file
-    std::ofstream out(output);
-    while (!in.eof()) {
-        std::tie(name, seq) = next_sample(in);
-
-        // print sample name
-        out << ">" << name << std::endl;
-        
-        // print snp-sites
-        for (int i = 0; i < snp_sites_loc.size(); i++) {
-            out << seq[snp_sites_loc[i]];
-        }
-        out << std::endl;
-    }
-
-    // close files
     in.close();
-    out.close();
 
     // determine sequence type
     if (sites.size() > 5) {
@@ -84,5 +66,5 @@ std::string snp_sites(std::string input, std::string output) {
         seq_type = NT;
     }
 
-    return seq_type;
+    return std::make_tuple(seq_type, snp_sites_loc, constant_sites_loc);
 }

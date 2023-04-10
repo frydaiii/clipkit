@@ -2,18 +2,18 @@
 #include <map>
 
 /*
-    Return number of occurences of each base.
+    Return number of occurences of each snp-site base.
 */
-std::vector<std::map<char, int>> num_ocurrences(std::string input, std::string seq_type);
+std::vector<std::map<char, int>> num_ocurrences_snp(std::string, std::string, std::vector<int>);
 
 /*
-    Return true if site is parsimony-informative.
+    Return locations parsimony-informative sites.
 */
-std::vector<bool> determine_parsimony_informative(std::vector<std::map<char, int>> base_counts);
+std::vector<int> determine_parsimony_informative(std::vector<int>, std::vector<std::map<char, int>>);
 
 /*
     Write result to file.
 */
-void write_result(std::string snp_file, std::vector<bool> is_parsimony_informative_site, std::string output);
+void write_result(std::string, std::vector<int>, std::string);
 
-void clipkit(std::string input_filename, std::string output_filename);
+void clipkit(std::string, std::string);
