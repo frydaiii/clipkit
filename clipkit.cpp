@@ -51,7 +51,7 @@ std::vector<int> determine_parsimony_informative(std::vector<int> snp_sites_loc,
     return parsimony_informative_sites_loc;
 }
 
-void write_result(std::string input_file, std::vector<int> pi_sites_loc, std::string output) {
+void write_result(std::string input_file, std::vector<int> sites_loc, std::string output) {
     // open snp-sites file for reading
     std::ifstream in(input_file);
     
@@ -66,12 +66,12 @@ void write_result(std::string input_file, std::vector<int> pi_sites_loc, std::st
 
         // print parsimony-informative sites, newline at 60th site
         int count = 0;
-        for (int i = 0; i < pi_sites_loc.size(); i++) {
+        for (int i = 0; i < sites_loc.size(); i++) {
             count++;
             if (count % 60 == 1 && count > 1) {
                 out << std::endl;
             }
-            out << seq[pi_sites_loc[i]];
+            out << seq[sites_loc[i]];
         }
         if (count > 0) out << std::endl;
     }
@@ -93,5 +93,10 @@ void clipkit(std::string input_file, std::string output_file) {
     std::vector<int> pi_sites_loc = determine_parsimony_informative(snp_sites_loc, base_snp_counts);
 
     // print result
+    // combine parsimony-informative sites and constant sites into new vector
+    std::vector<int> sites_loc(pi_sites_loc.size() + const_sites_loc.size());
+    std::merge(pi_sites_loc.begin(), pi_sites_loc.end(), const_sites_loc.begin(), const_sites_loc.end(), sites_loc.begin());
+    std::sort(sites_loc.begin(), sites_loc.end());
+
     write_result(input_file, pi_sites_loc, output_file);
 }
